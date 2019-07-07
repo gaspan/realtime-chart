@@ -29,6 +29,12 @@ mongoose.connect("mongodb+srv://gentur:rutneg@cluster0-3npte.gcp.mongodb.net/rea
 var schema = mongoose.Schema({name: {type:String,required: true}});
 var Vote = mongoose.model('Vote', schema);
 
+var Userschema = mongoose.Schema({
+    username: {type:String,required: true},
+    password: {type:String,required: true}
+});
+var User = mongoose.model('User', Userschema);
+
 // Render homepage.
 app.get('/', function(req, res) {
     res.sendfile('index.html');
@@ -37,7 +43,7 @@ app.get('/', function(req, res) {
 // Route for voting
 app.post('/vote', function(req, res) {
     var field = [{name: req.body.name}];
-    console.log(req.body)
+    // console.log(req.body)
 
     var newVote = new Vote(field[0]);
 
@@ -45,7 +51,7 @@ app.post('/vote', function(req, res) {
         if (err) {
             console.log(`error save data :${err}`)
         } else {
-            console.log(`Saved. data = ${data}`);
+            // console.log(`Saved. data = ${data}`);
             Vote.aggregate(
 
                 [{ "$group": {
@@ -55,8 +61,25 @@ app.post('/vote', function(req, res) {
         
                 function(err, results) {
                     if (err) throw err;
-                    console.log(`data socket: ${results}`);
-                    req.io.sockets.emit('vote', results);
+                    // console.log(`data socket: ${results}`);
+                    User.aggregate([
+                        {
+                            $sort:{_id:1}
+                        }
+                    ]
+                    ,(err, hasil)=>{
+                        if (err || hasil.length == 0) {
+                            console.log("no user found")
+                        } else {
+                            // console.log(hasil)
+                            for (let index = 0; index < hasil.length; index++) {
+                                let username = hasil[index].username
+                                let password = hasil[index].password
+                                req.io.sockets.emit(`vote${username}${password}`, results)                  
+                            }
+
+                        }
+                    })
                 }
                 );
         }
@@ -76,20 +99,52 @@ Socket.io Setting
 */
 
 io.on('connection', function (socket) {
-
-    Vote.aggregate(
-
-        [{ "$group": {
-            "_id": "$name",
-            "total_vote": { "$sum": 1 }
-        }}],
-
-        function(err, results) {
-            if (err) throw err;
-
-            socket.emit('vote', results);
+    User.aggregate([
+        {
+            $sort:{_id:1}
         }
-        );
+    ]
+    ,(err, hasil)=>{
+        if (err || hasil.length == 0) {
+            console.log("no user found")
+        } else {
+            // console.log(hasil)
+        Vote.aggregate(
+
+            [{ "$group": {
+                "_id": "$name",
+                "total_vote": { "$sum": 1 }
+            }}],
+    
+            function(err, results) {
+                // console.log(results)
+                if (err) throw err;
+    
+                for (let index = 0; index < hasil.length; index++) {
+                    let username = hasil[index].username
+                    let password = hasil[index].password
+                    socket.emit(`vote${username}${password}`, results)
+                }
+            }
+            )
+
+        }
+    })
+
+
+    // Vote.aggregate(
+
+    //     [{ "$group": {
+    //         "_id": "$name",
+    //         "total_vote": { "$sum": 1 }
+    //     }}],
+
+    //     function(err, results) {
+    //         if (err) throw err;
+
+    //         socket.emit('vote', results);
+    //     }
+    //     )
 
 });
 

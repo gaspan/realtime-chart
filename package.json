@@ -2,9 +2,10 @@
     "name": "RealtimeChart",
     "main": "app.js",
     "dependencies": {
+        "body-parser": "latest",
         "express": "latest",
         "mongoose": "latest",
-        "body-parser": "latest",
-        "socket.io": "latest"
+        "socket.io": "latest",
+        "socketio-auth": "^0.1.1"
     }
 }

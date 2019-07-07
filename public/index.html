@@ -26,7 +26,9 @@ var data;
 var myChart;
 var context;
 
-socket.on('vote', function (response) {
+let userInfo = {username: "username", password: "password123"}
+
+socket.on(`vote${userInfo.username}${userInfo.password}`, function (response) {
 
    var i = 0;
 
